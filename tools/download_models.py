@@ -10,6 +10,7 @@ Set RVC_HF_ENDPOINT to override the Hugging Face endpoint (e.g. hf-mirror.com).
 
 import argparse
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -23,6 +24,11 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 HF_ENDPOINT = os.environ.get("RVC_HF_ENDPOINT", "https://huggingface.co").rstrip("/")
 BASE_REPO = "lj1995/VoiceConversionWebUI"
+
+# HuggingFace model page URL -> expand to every .pth/.index file inside it.
+HF_REPO_PATTERN = re.compile(
+    r"^https?://(?:www\.)?huggingface\.co/([^/\s]+)/([^/\s?#]+)(?:/(?:tree|blob)/[^\s]*)?/?(?:\?.*)?$"
+)
 
 WEIGHT_ROOT = PROJECT_ROOT / "assets" / "weights"
 INDEX_ROOT = PROJECT_ROOT / "assets" / "indices"
@@ -107,6 +113,25 @@ def download_base_assets(keys=None, force=False, progress=None):
     return messages
 
 
+def expand_hf_repo_url(url):
+    """Expand a HuggingFace model page URL into direct file URLs (.pth/.index)."""
+    match = HF_REPO_PATTERN.match(url.strip())
+    if not match:
+        return None
+    user, repo = match.group(1), match.group(2)
+    api_url = "%s/api/models/%s/%s" % (HF_ENDPOINT, user, repo)
+    resp = requests.get(api_url, timeout=30)
+    resp.raise_for_status()
+    files = [item["rfilename"] for item in resp.json().get("siblings", [])]
+    picked = [name for name in files if name.lower().endswith((".pth", ".index"))]
+    if not picked:
+        raise ValueError("Tidak ada .pth/.index di %s/%s" % (user, repo))
+    return [
+        "%s/%s/%s/resolve/main/%s" % (HF_ENDPOINT, user, repo, name)
+        for name in picked
+    ]
+
+
 def download_voice_model_url(
     url,
     name=None,
@@ -117,11 +142,30 @@ def download_voice_model_url(
 ):
     """Download a .pth/.index/.zip voice model from ``url``.
 
+    A HuggingFace model page URL (https://huggingface.co/user/repo) is also
+    accepted: every .pth and .index inside that repo is downloaded.
+
     Returns a status message list. .pth files go to ``weight_root``, .index
     files to ``index_root``; zip archives are unpacked and sorted by extension.
     """
     weight_root = Path(weight_root)
     index_root = Path(index_root)
+
+    expanded_urls = expand_hf_repo_url(url)
+    if expanded_urls:
+        messages = []
+        for expanded_url in expanded_urls:
+            messages.extend(
+                download_voice_model_url(
+                    expanded_url,
+                    force=force,
+                    progress=progress,
+                    weight_root=weight_root,
+                    index_root=index_root,
+                )
+            )
+        return messages
+
     clean_url = urlparse(url)
     filename = name or _filename_from_url(url)
     lower = filename.lower()
