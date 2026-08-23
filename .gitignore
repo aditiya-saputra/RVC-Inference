@@ -1,0 +1,10 @@
+﻿__pycache__/
+*.pyc
+TEMP/
+opt/
+logs/**
+!logs/.gitkeep
+assets/weights/*
+assets/rmvpe/*
+assets/hubert_base/*
+assets/indices/*
