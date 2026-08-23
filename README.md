@@ -19,6 +19,19 @@ Versi **inference-only** dari [Retrieval-based-Voice-Conversion-WebUI](https://g
 Klik badge **Open In Colab** di atas → runtime GPU → *Run all*.
 Notebook otomatis clone repo ini (`REPO_URL` sudah mengarah ke sini), download base model, lalu tinggal upload voice model `.pth`/`.index`/`.zip` dan audio input.
 
+> ⚠️ Colab free tier memblokir usage terkait RVC (*runtime disconnected — disallowed usage*). Jika kena, gunakan **Kaggle**:
+
+## Pakai di Kaggle (alternatif gratis, tanpa blokir)
+
+Gunakan `RVC_Inference_Kaggle.ipynb`:
+1. Verifikasi akun dengan nomor HP di https://www.kaggle.com/settings
+2. Buat Notebook → Settings: **Accelerator = GPU T4 x2**, **Internet = On**
+3. File → Import Notebook → `RVC_Inference_Kaggle.ipynb`
+4. Run all — voice model bisa diisi via `MODEL_URL` (URL halaman HuggingFace langsung bisa) atau di-upload sebagai Kaggle Dataset
+5. Hasil muncul di panel **Output** `/kaggle/working/output`
+
+Kuota GPU Kaggle: ±30 jam/minggu gratis.
+
 ## Pakai lokal (CLI)
 
 ```bash
